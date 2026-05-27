@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Rocket Elevator</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #05070a;
+        color: #dbe4ee;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      #unity-container {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: #05070a;
+      }
+
+      #unity-frame {
+        position: relative;
+        width: min(100vw, calc(100dvh * 9 / 16));
+        height: min(100dvh, calc(100vw * 16 / 9));
+        background: #0d1117;
+        overflow: hidden;
+      }
+
+      #unity-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        background: #0d1117;
+      }
+
+      #unity-loading-bar {
+        position: absolute;
+        left: 50%;
+        bottom: 2rem;
+        width: min(16rem, calc(100% - 3rem));
+        height: 0.35rem;
+        transform: translateX(-50%);
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        background: rgba(15, 23, 42, 0.9);
+      }
+
+      #unity-progress-bar-full {
+        width: 0%;
+        height: 100%;
+        background: #38bdf8;
+      }
+
+      #unity-warning {
+        position: absolute;
+        left: 50%;
+        top: 1rem;
+        transform: translateX(-50%);
+        max-width: min(32rem, calc(100% - 2rem));
+        z-index: 2;
+      }
+
+      #unity-warning div {
+        margin: 0.35rem 0;
+        padding: 0.55rem 0.75rem;
+        background: rgba(13, 17, 23, 0.94);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+      }
+
+      #unity-fullscreen-button {
+        position: absolute;
+        right: max(0.75rem, env(safe-area-inset-right));
+        bottom: max(0.75rem, env(safe-area-inset-bottom));
+        width: 2.4rem;
+        height: 2.4rem;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: rgba(13, 17, 23, 0.82);
+        color: #e2e8f0;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+
+      @media (display-mode: fullscreen) {
+        #unity-frame {
+          width: 100vw;
+          height: 100dvh;
+        }
+      }
+
+      :fullscreen #unity-frame,
+      #unity-container:fullscreen #unity-frame {
+        width: 100vw;
+        height: 100dvh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="unity-container">
+      <div id="unity-frame">
+        <canvas
+          id="unity-canvas"
+          width="540"
+          height="960"
+          tabindex="-1"
+        ></canvas>
+        <div id="unity-loading-bar">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+        <button id="unity-fullscreen-button" type="button" aria-label="Fullscreen">
+          FS
+        </button>
+        <div id="unity-warning"></div>
+      </div>
+    </div>
+
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
+      var frame = document.querySelector("#unity-frame");
+      var loadingBar = document.querySelector("#unity-loading-bar");
+      var progressBarFull = document.querySelector("#unity-progress-bar-full");
+      var fullscreenButton = document.querySelector("#unity-fullscreen-button");
+      var warningBanner = document.querySelector("#unity-warning");
+
+      function unityShowBanner(msg, type) {
+        var div = document.createElement("div");
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type === "error") {
+          div.style.borderColor = "rgba(248, 113, 113, 0.7)";
+        } else if (type === "warning") {
+          div.style.borderColor = "rgba(250, 204, 21, 0.7)";
+          setTimeout(function () {
+            warningBanner.removeChild(div);
+          }, 5000);
+        }
+      }
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/WebGLPages.loader.js";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/WebGLPages.data",
+        frameworkUrl: buildUrl + "/WebGLPages.framework.js",
+        codeUrl: buildUrl + "/WebGLPages.wasm",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "Rocket Elevator",
+        productVersion: "1.0",
+        showBanner: unityShowBanner,
+        matchWebGLToCanvasSize: true,
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2)
+      };
+
+      function resizeUnityCanvas() {
+        config.devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        var rect = frame.getBoundingClientRect();
+        canvas.style.width = Math.floor(rect.width) + "px";
+        canvas.style.height = Math.floor(rect.height) + "px";
+      }
+
+      window.addEventListener("resize", resizeUnityCanvas);
+      document.addEventListener("fullscreenchange", function () {
+        requestAnimationFrame(resizeUnityCanvas);
+      });
+      resizeUnityCanvas();
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = function () {
+        createUnityInstance(canvas, config, function (progress) {
+          progressBarFull.style.width = 100 * progress + "%";
+        }).then(function (unityInstance) {
+          loadingBar.style.display = "none";
+          fullscreenButton.onclick = function () {
+            unityInstance.SetFullscreen(1);
+          };
+        }).catch(function (message) {
+          alert(message);
+        });
+      };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>
